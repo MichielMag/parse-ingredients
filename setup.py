@@ -5,9 +5,9 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="parse-ingredients", # Replace with your own username
-    version="0.0.1",
+    version="0.0.2",
     author="Michiel K",
-    author_email="michieL_m@live.nl",
+    author_email="",
     description="Parse strings of ingredients to their name, unit, quantity and optional comments.",
     long_description=long_description,
     long_description_content_type="text/markdown",

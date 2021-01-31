@@ -46,8 +46,8 @@ slashFractionMatch = re.compile(r'(\d{1,3}\/\d{1,3})')
 vulgarSlashFractionMatch = re.compile(r'(\d{1,3}\u2044\d{1,3})')
 # number with a vulgar slash in a fraction (1 1⁄2)
 numberAndVulgarSlashFraction = re.compile(r'(\d{1,3}?\s\d\u2044\d{1,3})')
-# any of the above
-quantityMatch = re.compile(r'(\d{1,3}?\s\d\/\d{1,3})|(\d{1,3}?\s?\d\u2044\d{1,3})|(\d{1,3}\u2044\d{1,3})|(\d{1,3}\s?[\u00BC-\u00BE\u2150-\u215E])|([\u00BC-\u00BE\u2150-\u215E])|(\d{1,3}\/?\d?)')
+# any of the above, where the first character is not a word (to keep out "V8")
+quantityMatch = re.compile(r'(?<!\w)((\d{1,3}?\s\d\/\d{1,3})|(\d{1,3}?\s?\d\u2044\d{1,3})|(\d{1,3}\u2044\d{1,3})|(\d{1,3}\s?[\u00BC-\u00BE\u2150-\u215E])|([\u00BC-\u00BE\u2150-\u215E])|(\d{1,3}\/?\d?)%?)')
 # string between parantheses, for example: "this is not a match (but this is, including the parantheses)"
 betweenParanthesesMatch = re.compile(r'\(([^\)]+)\)')
 
@@ -85,21 +85,64 @@ def toFloat(quantity : str) -> float:
     if numberMatch.match(quantity) is not None:
         return int(quantity)
 
+def average(quantities):
+    """ In the case we have multiple numbers in an ingredient string
+        '1 - 2 eggs', we can use this function to just average that out.
+    """
+    # if there is no quantity in the string, there is a good chance the string was
+    # just "onion", in which case the quantity should be 1
+    if quantities is None or len(quantities) == 0:
+        return 1
+    total = 0
+    n = len(quantities)
+    for q in quantities:
+        total += toFloat(q.strip(' '))
+    return total / n
 
+def cleanhtml(raw_html):
+    """ In some recipe websites, the ingredient can contain an HTML tag, mostly an anchor
+        to link to some other recipe. Let's remove those.
+    """
+    cleanr = re.compile('<.*?>')
+    cleantext = re.sub(cleanr, '', raw_html)
+    return cleantext
 
-def parse_ingredient(ingredient : str) -> Ingredient:
+def parse_ingredient(raw_ingredient : str) -> Ingredient:
     """ Tries to extract the quantity, the unit and the ingredient itself from a string """
+    
     # We're doing a VERY simple parse. This could probably be better with some NLP
     # but we have nowhere near time enough for that during this assignment.
 
-    rest = ingredient
-
+    ingredient = cleanhtml(raw_ingredient)
     quantity = 0
     unit = ''
     name = ''
     comment = ''
 
-    quantity_string = None
+    # Recipe websites tend to put a comment between parantheses. 
+    # for example: 1 (fresh) egg. Let's see if we can find any and extract it
+    betweenMatch = betweenParanthesesMatch.search(ingredient)
+    if betweenMatch is not None:
+        betweenParentheses = betweenMatch.group()
+        comment = comment + (', ' if len(comment) > 0 else '') + betweenParentheses
+        ingredient = ingredient.replace(betweenParentheses, '')
+        if ingredient[0] == ' ':
+            ingredient = ingredient[1:]
+
+    # Some recipe websites tend to put a comment in the end of the line
+    # seperated by a comma. Let's see if we can find any and extract it
+    # We do this here, pretty early, because there might be numbers in there
+    # we don't want to take in account for quantities.
+    commaSplitted = ingredient.split(',')
+    if len(commaSplitted) > 1:
+        comment = comment + ' ' + ', '.join(commaSplitted[1:])
+        comment = comment.strip(' ')
+        ingredient = commaSplitted[0]
+
+
+    rest = ingredient
+
+    last_quantity_character = 0
 
     # First, let's see if we can find any quantity in the forms of:
     # type                              -   example
@@ -108,34 +151,33 @@ def parse_ingredient(ingredient : str) -> Ingredient:
     # a normal slash between numbers    -   1/2
     # a number                          -   1 or 2 etc.
     # a number and a vulgar fraction    -   1 ½ or 1½
-    match = quantityMatch.match(ingredient)
-    if match is not None:
-        quantity_string = match.group().strip(' ')
-        quantity = toFloat(quantity_string)
+    match = quantityMatch.findall(ingredient)
+    if match is not None and len(match) > 0:
+        # Take all found regex matches and take them from their groups into a flat array
+        quantity_groups = list(map(lambda x: next(filter(lambda y: y != '', x)), match))
+
+        # We don't want percentages, but we couldn't match them with regex.
+        quantity_groups = [i for i in quantity_groups if '%' not in i]
+        q_n = len(quantity_groups)
         
-    if quantity_string is not None:
-        length = len(quantity_string)
-        if ingredient[length] == ' ':
-            length = length + 1
-        rest = ingredient[length:]
+        # Find the last character index that matched a quantity
+        last_quantity_character = ingredient.rfind(quantity_groups[q_n-1]) + len(quantity_groups[q_n-1])
 
-    # Recipe websites tend to put a comment between parantheses. 
-    # for example: 1 (fresh) egg. Let's see if we can find any and extract it
-    betweenMatch = betweenParanthesesMatch.search(rest)
-    if betweenMatch is not None:
-        betweenParentheses = betweenMatch.group()
-        comment = betweenParentheses[1:-1]
-        rest = rest.replace(betweenParentheses, '')
-        if rest[0] == ' ':
-            rest = rest[1:]
-
-    # Other recipe websites tend to put a comment in the end of the line
-    # seperated by a comma. Let's see if we can find any and extract it
-    commaSplitted = rest.split(',')
-    if len(commaSplitted) > 1:
-        comment = comment + ' ' + ', '.join(commaSplitted[1:])
-        comment = comment.strip(' ')
-        rest = commaSplitted[0]
+        # If the last character happens to be in the end of the string...
+        # Someone probably said 'see note 1' in the end of his ingredient.
+        if last_quantity_character == len(ingredient) or last_quantity_character == len(ingredient) - 1:
+            if q_n > 1:
+                last_quantity_character = ingredient.rfind(quantity_groups[q_n-2]) + len(quantity_groups[q_n-2])
+            else:
+                last_quantity_character = 0
+            quantity_groups.pop()
+    
+        quantity = average(quantity_groups)
+    
+    if last_quantity_character > 0:
+        if ingredient[last_quantity_character] == ' ':
+            last_quantity_character = last_quantity_character + 1
+        rest = ingredient[last_quantity_character:]
 
     # Now split the rest of the string.
     splitted = rest.split(' ')
@@ -168,4 +210,4 @@ def parse_ingredient(ingredient : str) -> Ingredient:
     # and voila! The most basic ingredient parser ever.
     # as I said, I'm not too happy with it and NLP would probably
     # be a better fit, but this brings more complexity
-    return Ingredient(name, quantity, unit, comment, ingredient)
+    return Ingredient(name.strip(' '), quantity, unit, comment, ingredient)

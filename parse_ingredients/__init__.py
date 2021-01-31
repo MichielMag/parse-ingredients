@@ -109,7 +109,7 @@ def cleanhtml(raw_html):
 
 def parse_ingredient(raw_ingredient : str) -> Ingredient:
     """ Tries to extract the quantity, the unit and the ingredient itself from a string """
-    
+
     # We're doing a VERY simple parse. This could probably be better with some NLP
     # but we have nowhere near time enough for that during this assignment.
 
@@ -210,4 +210,4 @@ def parse_ingredient(raw_ingredient : str) -> Ingredient:
     # and voila! The most basic ingredient parser ever.
     # as I said, I'm not too happy with it and NLP would probably
     # be a better fit, but this brings more complexity
-    return Ingredient(name.strip(' '), quantity, unit, comment, ingredient)
+    return Ingredient(name.strip(' '), quantity, unit, comment, raw_ingredient)

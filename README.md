@@ -8,12 +8,12 @@ pip install parse-ingredients
 
 ## To use
 ```python
-from recipe_searchers import search_recipe
+from parse_ingredients import parse_ingredient
 
-result = search_recipe("12 ounces lean ground beef, preferably 85 percent lean")
+result = parse_ingredient("12 ounces lean ground beef, preferably 85 percent lean")
 print(f"Found results: \n {result}")
 ```
-```search_recipe()``` returns an object in the form of:
+```parse_ingredient()``` returns an object in the form of:
 
 
 ```json

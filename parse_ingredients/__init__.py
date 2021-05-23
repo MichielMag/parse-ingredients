@@ -17,18 +17,32 @@ units = {
     "g": ["g", "gram", "grams"],
     "mg": ["mg", "milligram", "milli gram", "milligrams", "milli grams"],
     "kg": ["kg", "kilogram", "kilo gram", "kilograms", "kilo grams"],
-    "oz": ["oz", "ounce", "ounces"],
+    "oz": ["oz", "ounce", "ounces", "-ounce"],
+    "qt": ["qt", "quart"],
     "fl": ["fl"],
-    "tsp": ["tsp", "tsps", "teaspoon", "teaspoons"],
-    "tbsp": ["tbsp", "tbsps", "tablespoon", "tablespoons"],
-    "cup": ["cup", "cups"],
+    "tsp": ["tsp", "tsps", "tsp.", "tsps.", "teaspoon", "teaspoons"],
+    "tbsp": ["tbs", "TBS", "tbsp", "tbsps", "tbsp.", "tbsps.", "tablespoon", "tablespoons", "Tbsp", "Tbsps", "Tbsp.", "Tbsps."],
+    "cup": ["cup", "cups", "c."],
     "pint": ["pint", "pints"],
     "pinch": ["pinch"],
+    "dash": ["dash"],
     "strip": ["strip", "strips"],
+    "can": ["can", "cans"],
     "envelope": ["envelope", "envelopes", "sheet", "sheets"],
     "gal": ["gal", "gallon", "gallons"],
-    "lb": ["lb", "lbs", "pound", "pounds"],
-    "bunch": ["bunch", "bunches"]
+    "lb": ["lb", "lbs", "lb.", "lbs.", "pound", "pounds", "-pound"],
+    "whole": ["whole"],
+    "head": ["head", "heads"],
+    "clove": ["clove", "cloves"],
+    "bunch": ["bunch", "bunches"],
+    "handful": ["handful", "handfuls", "Handful", "Handfuls"],
+    "piece": ["piece", "pieces"],
+    "whole": ["whole"],
+    "large": ["Large", "large"], # e.g.: "One large potato"
+    "medium": ["Medium","medium"],
+    "small": ["Small","small"],
+    "inch": ["inch", "inches", "\""], # e.g.: "2-3inch piece of ginger" or 2-3" piece of ginger
+    "cm": ["cm"] # see inch…
 }
 
 # numbers with a simple slash fraction (1 1/3, 2 4/5, etc.)

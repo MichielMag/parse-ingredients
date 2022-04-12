@@ -17,18 +17,28 @@ units = {
     "g": ["g", "gram", "grams"],
     "mg": ["mg", "milligram", "milli gram", "milligrams", "milli grams"],
     "kg": ["kg", "kilogram", "kilo gram", "kilograms", "kilo grams"],
-    "oz": ["oz", "ounce", "ounces"],
+    "oz": ["oz", "ounce", "ounces", "-ounce"],
+    "qt": ["qt", "quart"],
     "fl": ["fl"],
-    "tsp": ["tsp", "tsps", "teaspoon", "teaspoons"],
-    "tbsp": ["tbsp", "tbsps", "tablespoon", "tablespoons"],
-    "cup": ["cup", "cups"],
+    "tsp": ["tsp", "tsps", "tsp.", "tsps.", "teaspoon", "teaspoons"],
+    "tbsp": ["tbs", "tbsp", "tbsps", "tbsp.", "tbsps.", "tablespoon", "tablespoons"],
+    "cup": ["cup", "cups", "c."],
     "pint": ["pint", "pints"],
     "pinch": ["pinch"],
     "strip": ["strip", "strips"],
     "envelope": ["envelope", "envelopes", "sheet", "sheets"],
     "gal": ["gal", "gallon", "gallons"],
-    "lb": ["lb", "lbs", "pound", "pounds"],
-    "bunch": ["bunch", "bunches"]
+    "dash": ["dash"],
+    "can": ["can", "cans"],    
+    "lb": ["lb", "lbs", "lb.", "lbs.", "pound", "pounds", "-pound"],
+    "whole": ["whole"],
+    "head": ["head", "heads"],
+    "clove": ["clove", "cloves"],
+    "bunch": ["bunch", "bunches"],
+    "handful": ["handful", "handfuls"],
+    "piece": ["piece", "pieces", "pc", "pc."],
+    "inch": ["inch", "inches", "\""], # e.g.: "2-3inch piece of ginger" or 2-3" piece of ginger
+    "cm": ["cm"] # see inch…
 }
 
 # numbers with a simple slash fraction (1 1/3, 2 4/5, etc.)
@@ -36,7 +46,7 @@ numberAndSlashFraction = re.compile(r'(\d{1,3}?\s\d\/\d{1,3})')
 # Vulgar fractions (½, ⅓, etc.)
 fractionMatch = re.compile(r'[\u00BC-\u00BE\u2150-\u215E]')
 # numbers (0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
-numberMatch = re.compile(r'(\d)')
+numberMatch = re.compile(r'(\d*(\.?|,?)?\d*)')
 # numbers and fractions (1⅓, 1 ⅓, etc.)
 numberAndFractionMatch = re.compile(r'(\d{1,3}\s?[\u00BC-\u00BE\u2150-\u215E])')
 # simple slash fractions (1/2, 1/3, 5/4, etc.)
@@ -47,7 +57,7 @@ vulgarSlashFractionMatch = re.compile(r'(\d{1,3}\u2044\d{1,3})')
 # number with a vulgar slash in a fraction (1 1⁄2)
 numberAndVulgarSlashFraction = re.compile(r'(\d{1,3}?\s\d\u2044\d{1,3})')
 # any of the above, where the first character is not a word (to keep out "V8")
-quantityMatch = re.compile(r'(?<!\w)((\d{1,3}?\s\d\/\d{1,3})|(\d{1,3}?\s?\d\u2044\d{1,3})|(\d{1,3}\u2044\d{1,3})|(\d{1,3}\s?[\u00BC-\u00BE\u2150-\u215E])|([\u00BC-\u00BE\u2150-\u215E])|(\d{1,3}\/?\d?)%?)')
+quantityMatch = re.compile(r'(?<!\w)((\d{1,3}?\s\d\/\d{1,3})|(\d*(\.?)?\d*)|(\d{1,3}?\s?\d\u2044\d{1,3})|(\d{1,3}\u2044\d{1,3})|(\d{1,3}\s?[\u00BC-\u00BE\u2150-\u215E])|([\u00BC-\u00BE\u2150-\u215E])|(\d{1,3}\/?\d?)%?)')
 # string between parantheses, for example: "this is not a match (but this is, including the parantheses)"
 betweenParanthesesMatch = re.compile(r'\(([^\)]+)\)')
 
@@ -83,7 +93,7 @@ def toFloat(quantity : str) -> float:
         fraction = vulgarSlashFractionMatch.search(quantity).group()
         return int(first) + toFloat(fraction)
     if numberMatch.match(quantity) is not None:
-        return int(quantity)
+        return float(quantity)
 
 def average(quantities):
     """ In the case we have multiple numbers in an ingredient string
@@ -135,9 +145,14 @@ def parse_ingredient(raw_ingredient : str) -> Ingredient:
     # we don't want to take in account for quantities.
     commaSplitted = ingredient.split(',')
     if len(commaSplitted) > 1:
-        comment = comment + ' ' + ', '.join(commaSplitted[1:])
-        comment = comment.strip(' ')
-        ingredient = commaSplitted[0]
+        # But we also want to allow decimals in the form of 0,5
+        if (len(commaSplitted[0]) == 0 or not commaSplitted[0][-1].isnumeric()) and not commaSplitted[1][0].isnumeric():
+            print("Doing split for " + ingredient)
+            comment = comment + ' ' + ', '.join(commaSplitted[1:])
+            comment = comment.strip(' ')
+            ingredient = commaSplitted[0]
+        else:
+            print("Skipping split for " + ingredient)
 
 
     rest = ingredient
@@ -159,7 +174,6 @@ def parse_ingredient(raw_ingredient : str) -> Ingredient:
         # We don't want percentages, but we couldn't match them with regex.
         quantity_groups = [i for i in quantity_groups if '%' not in i]
         q_n = len(quantity_groups)
-        
         # Find the last character index that matched a quantity
         last_quantity_character = ingredient.rfind(quantity_groups[q_n-1]) + len(quantity_groups[q_n-1])
 
